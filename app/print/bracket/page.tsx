@@ -1,8 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function PrintBracket() {
+// CRITICAL FIX: This tells Next.js to not build this page statically
+export const dynamic = 'force-dynamic';
+
+function PrintContent() {
   const searchParams = useSearchParams();
   const classId = searchParams.get('class_id');
   
@@ -13,10 +16,12 @@ export default function PrintBracket() {
     if (!classId) return;
 
     // Fetch Class Name
-    fetch('/api/classes').then(res => res.json()).then(data => {
-        const cls = data.find((c: any) => c.class_id === classId);
+    fetch('/api/classes')
+      .then(res => res.json())
+      .then(data => {
+        const cls = data.find((c: any) => c.class_id.toString() === classId.toString());
         if (cls) setClassName(cls.name);
-    });
+      });
 
     // Fetch Bracket Data
     fetch(`/api/hooks?class_id=${classId}&t=${Date.now()}`)
@@ -53,7 +58,7 @@ export default function PrintBracket() {
 
       {/* HEADER */}
       <div className="text-center mb-8 border-b-2 border-black pb-4">
-        <h1 className="text-4xl font-black uppercase tracking-tighter">{className}</h1>
+        <h1 className="text-4xl font-black uppercase tracking-tighter">{className || 'Loading...'}</h1>
         <p className="text-lg font-bold mt-1">OFFICIAL BRACKET • {new Date().toLocaleDateString()}</p>
       </div>
 
@@ -76,7 +81,7 @@ export default function PrintBracket() {
                             .map((hook) => (
                                 <div key={hook.hook_id} className="flex flex-col justify-center relative flex-1 my-2">
                                     
-                                    {/* CONNECTOR LINES (CSS) */}
+                                    {/* CONNECTOR LINES */}
                                     {!isFirstRound && (
                                         <div className="absolute top-1/2 left-[-16px] w-4 border-b-2 border-black"></div>
                                     )}
@@ -124,4 +129,13 @@ export default function PrintBracket() {
       </div>
     </div>
   );
+}
+
+export default function PrintBracket() {
+    // This Suspense boundary is required for useSearchParams() during build
+    return (
+        <Suspense fallback={<div className="p-10 text-center font-bold">Loading Print View...</div>}>
+            <PrintContent />
+        </Suspense>
+    );
 }
