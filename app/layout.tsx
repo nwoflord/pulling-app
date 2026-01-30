@@ -1,30 +1,24 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+// Configure the Inter font
+const inter = Inter({ subsets: ["latin"] });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-// 1. Add Viewport settings (Prevents zooming on inputs, feels like an app)
+// 1. Viewport settings (Prevents zooming on inputs, makes it feel like an app)
 export const viewport: Viewport = {
   themeColor: "#0f172a",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  userScalable: false, // Prevents accidental pinch-zoom
+  userScalable: false,
 };
 
+// 2. Metadata settings
 export const metadata: Metadata = {
   title: "Pulling Manager",
   description: "Event Management System",
-  manifest: "/manifest.json", // <--- LINK YOUR MANIFEST HERE
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -39,7 +33,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      {/* Apply the Inter font class here */}
+      <body className={inter.className}>
         {children}
       </body>
     </html>
