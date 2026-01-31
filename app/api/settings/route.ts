@@ -1,51 +1,69 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db'; // Adjust path if needed (e.g. '../lib/db' or '@lib/db')
+import { db } from '@/lib/db'; // Validated import path
 
-// 1. GET: Fetch codes (For Admin Settings Page)
+// Helper to handle DB Query with a timeout so it doesn't hang forever
+async function queryWithTimeout(text: string, params: any[]) {
+  const timeoutPromise = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('Database timeout')), 5000)
+  );
+  
+  // Race the query against a 5-second timer
+  return Promise.race([
+    db.query(text, params),
+    timeoutPromise
+  ]) as Promise<any>;
+}
+
+// 1. GET: Fetch codes
 export async function GET() {
   try {
-    // Queries the access_codes table using your existing db connection
-    const result = await db.query('SELECT role, code FROM access_codes ORDER BY role ASC');
+    const result = await queryWithTimeout('SELECT role, code FROM access_codes ORDER BY role ASC', []);
     return NextResponse.json(result.rows);
-  } catch (error) {
-    console.error("Database Error:", error);
-    return NextResponse.json({ error: 'DB Connection Failed' }, { status: 500 });
+  } catch (error: any) {
+    console.error("GET API Error:", error.message);
+    return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
   }
 }
 
-// 2. PUT: Update a specific code (For Admin Settings Page)
+// 2. PUT: Update codes
 export async function PUT(request: Request) {
   try {
     const { role, code } = await request.json();
-    
-    // Updates the code for a specific role
-    await db.query('UPDATE access_codes SET code = $1 WHERE role = $2', [code, role]);
-    
+    await queryWithTimeout('UPDATE access_codes SET code = $1 WHERE role = $2', [code, role]);
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Update Error:", error);
-    return NextResponse.json({ error: 'Update Failed' }, { status: 500 });
+  } catch (error: any) {
+    console.error("PUT API Error:", error.message);
+    return NextResponse.json({ error: 'Update failed' }, { status: 500 });
   }
 }
 
-// 3. POST: Verify password (For Login Page)
-// THIS IS THE MISSING PART THAT FIXES THE "HANG"
+// 3. POST: Verify Login (The part that was hanging)
 export async function POST(request: Request) {
+  console.log("Login POST received...");
+  
   try {
-    const { attempt } = await request.json();
+    const body = await request.json();
+    const { attempt } = body;
     
-    // Check if the entered code exists in the database
-    const result = await db.query('SELECT role FROM access_codes WHERE code = $1 LIMIT 1', [attempt]);
-    
-    if (result.rows.length > 0) {
-      // Success! Return the role (e.g., 'admin') so the login page knows where to go
-      return NextResponse.json({ success: true, role: result.rows[0].role });
-    } else {
-      // No match found
+    if (!attempt) {
+      console.log("No password provided");
       return NextResponse.json({ success: false });
     }
-  } catch (error) {
-    console.error("Login Verify Error:", error);
-    return NextResponse.json({ error: 'Verification Failed' }, { status: 500 });
+
+    // Run query with 5s timeout
+    const result = await queryWithTimeout('SELECT role FROM access_codes WHERE code = $1 LIMIT 1', [attempt]);
+    
+    if (result.rows.length > 0) {
+      console.log("Login Success for role:", result.rows[0].role);
+      return NextResponse.json({ success: true, role: result.rows[0].role });
+    } else {
+      console.log("Login Failed: Incorrect code");
+      return NextResponse.json({ success: false });
+    }
+
+  } catch (error: any) {
+    // This catches both connection errors and timeouts
+    console.error("LOGIN CRITICAL ERROR:", error.message);
+    return NextResponse.json({ error: 'Server Verification Failed' }, { status: 500 });
   }
 }
