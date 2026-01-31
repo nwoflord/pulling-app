@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-// 1. GET: Fetch codes (Used by your Admin Settings Page)
+// 1. GET: Fetch codes
 export async function GET() {
   try {
-    // Queries your existing 'access_codes' table
     const result = await db.query('SELECT role, code FROM access_codes ORDER BY role ASC');
     return NextResponse.json(result.rows);
   } catch (error) {
@@ -13,14 +12,11 @@ export async function GET() {
   }
 }
 
-// 2. PUT: Update a specific code (Used by your Admin Settings Page)
+// 2. PUT: Update a specific code
 export async function PUT(request: Request) {
   try {
     const { role, code } = await request.json();
-    
-    // Updates the code for a specific role
     await db.query('UPDATE access_codes SET code = $1 WHERE role = $2', [code, role]);
-    
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Update Error:", error);
@@ -28,20 +24,31 @@ export async function PUT(request: Request) {
   }
 }
 
-// 3. POST: Verify password (Used by your Login Page)
-// This is the function that actually checks the password against the database
+// 3. POST: Verify password AND Set Cookie
 export async function POST(request: Request) {
   try {
     const { attempt } = await request.json();
     
-    // Check if the entered code exists in the database
+    // Check DB
     const result = await db.query('SELECT role FROM access_codes WHERE code = $1 LIMIT 1', [attempt]);
     
     if (result.rows.length > 0) {
-      // Success! Return the role so the frontend knows where to redirect
-      return NextResponse.json({ success: true, role: result.rows[0].role });
+      const role = result.rows[0].role;
+      
+      // Create the Success Response
+      const response = NextResponse.json({ success: true, role: role });
+
+      // CRITICAL FIX: Set the cookie on the SERVER SIDE
+      // This forces the browser to accept the login
+      response.cookies.set('auth', role, {
+        httpOnly: false, // Allow client to read if necessary
+        path: '/',       // Valid for the whole site
+        maxAge: 60 * 60 * 24 * 7, // 1 week
+        sameSite: 'lax'
+      });
+
+      return response;
     } else {
-      // No match found
       return NextResponse.json({ success: false });
     }
   } catch (error) {
