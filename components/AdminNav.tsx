@@ -1,10 +1,9 @@
 'use client';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 export default function AdminNav() {
   const pathname = usePathname();
-  const router = useRouter();
 
   const navItems = [
     { name: 'Dashboard', href: '/admin' },
@@ -13,15 +12,17 @@ export default function AdminNav() {
     { name: 'Bracket', href: '/admin/bracket' },
     { name: 'Reports', href: '/admin/reports' },
     { name: 'Sponsors', href: '/admin/sponsors' },
-    { name: 'Settings', href: '/admin/settings' }, // <--- NEW LINK
+    { name: 'Settings', href: '/admin/settings' },
   ];
 
-  const handleLogout = () => {
-  // Clear the cookie for the WHOLE site
-  document.cookie = "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-  // Force reload to login page
-  window.location.href = '/login';
-};
+  const handleLogout = async () => {
+    // 1. Tell the server to delete the cookie (Nukes the session)
+    await fetch('/api/logout', { method: 'POST' });
+    
+    // 2. Force reload to the MAIN MENU (Public Side)
+    // We use window.location.href to ensure the browser clears the memory of the session
+    window.location.href = '/';
+  };
 
   return (
     <nav className="bg-slate-900 text-white shadow-lg mb-6">
@@ -54,9 +55,9 @@ export default function AdminNav() {
           <div>
             <button 
                 onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase px-4 py-2 rounded transition-colors"
+                className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase px-4 py-2 rounded transition-colors shadow-md border-b-2 border-red-800 active:border-b-0 active:translate-y-[2px]"
             >
-                Sign Out
+                Exit & Lock
             </button>
           </div>
 
