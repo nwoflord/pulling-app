@@ -5,9 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // If they were redirected here, go back there. Otherwise go to Admin.
-  const nextUrl = searchParams.get('next') || '/admin'; 
-  
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -16,6 +13,7 @@ function LoginContent() {
     setLoading(true);
 
     try {
+      // 1. Verify Password
       const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -25,30 +23,43 @@ function LoginContent() {
       const data = await res.json();
 
       if (data.success && data.role) {
-        // --- FALLBACK: Set cookie MANUALLY in browser ---
-        // This ensures it works even if the server header gets blocked
+        // 2. NUKE: Delete any possible conflicting cookies
+        document.cookie = "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+        document.cookie = "auth=; path=/admin; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+
+        // 3. SET: Force the new cookie
+        // Note: We use 'Lax' to ensure it works in most modern browser contexts
         document.cookie = `auth=${data.role}; path=/; max-age=604800; SameSite=Lax`;
 
-        // --- FORCE REDIRECT ---
-        // Determine destination based on role
-        let destination = '/';
-        if (data.role === 'admin') destination = '/admin';
-        else if (data.role === 'official') destination = '/trackside';
-        else if (data.role === 'lineup') destination = '/lineup';
-        else if (data.role === 'announcer') destination = '/announcer';
-        else if (data.role === 'registration') destination = '/registration';
+        // 4. VERIFY: Did it stick?
+        if (document.cookie.includes('auth=')) {
+           // Cookie is there, safe to redirect
+           const destination = getDestination(data.role);
+           window.location.href = destination; 
+        } else {
+           // Cookie failed to set (Browser blocking it?)
+           alert("Browser blocked the login cookie. Please enable cookies for this site.");
+           setLoading(false);
+        }
         
-        // Use the hard redirect
-        window.location.assign(destination);
       } else {
         alert("Incorrect Access Code");
-        setLoading(false); // Stop the spinner so they can try again
+        setLoading(false);
       }
     } catch (error) {
       console.error(error);
-      alert("System Error: Please refresh and try again.");
+      alert("System Error");
       setLoading(false);
     }
+  };
+
+  const getDestination = (role: string) => {
+    if (role === 'admin') return '/admin';
+    if (role === 'official') return '/trackside';
+    if (role === 'lineup') return '/lineup';
+    if (role === 'announcer') return '/announcer';
+    if (role === 'registration') return '/registration';
+    return '/';
   };
 
   return (
@@ -69,7 +80,7 @@ function LoginContent() {
           />
           <button 
             disabled={loading}
-            className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-[0.98] ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-[0.98] ${loading ? 'opacity-50' : ''}`}
           >
             {loading ? 'Verifying...' : 'Unlock Dashboard'}
           </button>

@@ -17,10 +17,11 @@ export default function AdminNav() {
   ];
 
   const handleLogout = () => {
-    document.cookie = "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-    router.push('/');
-    router.refresh();
-  };
+  // Clear the cookie for the WHOLE site
+  document.cookie = "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+  // Force reload to login page
+  window.location.href = '/login';
+};
 
   return (
     <nav className="bg-slate-900 text-white shadow-lg mb-6">

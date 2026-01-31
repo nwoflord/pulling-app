@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-// 1. DISABLE CACHING (Critical for login APIs)
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -23,25 +22,14 @@ export async function PUT(request: Request) {
   }
 }
 
+// POST: Just checks the password. Does NOT set cookies.
 export async function POST(request: Request) {
   try {
     const { attempt } = await request.json();
-    
     const result = await db.query('SELECT role FROM access_codes WHERE code = $1 LIMIT 1', [attempt]);
     
     if (result.rows.length > 0) {
-      const role = result.rows[0].role;
-      const response = NextResponse.json({ success: true, role: role });
-
-      // 2. SET COOKIE (looser security for reliability)
-      response.cookies.set('auth', role, {
-        path: '/',
-        maxAge: 60 * 60 * 24 * 7, // 1 week
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production', // Only secure in live, not local
-      });
-
-      return response;
+      return NextResponse.json({ success: true, role: result.rows[0].role });
     } else {
       return NextResponse.json({ success: false });
     }
