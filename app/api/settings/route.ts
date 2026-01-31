@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-// Force dynamic so Vercel doesn't cache the response
+// CRITICAL: This ensures Vercel doesn't serve a "cached" version of the login
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -23,25 +23,24 @@ export async function PUT(request: Request) {
   }
 }
 
-// POST: Verify & Set Cookie (Server Side)
+// POST: Verify Password & Issue Cookie
 export async function POST(request: Request) {
   try {
     const { attempt } = await request.json();
     
-    // 1. Verify Password
     const result = await db.query('SELECT role FROM access_codes WHERE code = $1 LIMIT 1', [attempt]);
     
     if (result.rows.length > 0) {
       const role = result.rows[0].role;
       const response = NextResponse.json({ success: true, role: role });
 
-      // 2. SET COOKIE (Server Authority)
-      // We use 'Lax' and httpOnly so the browser trusts it more
+      // ISSUE THE COOKIE
       response.cookies.set('auth', role, {
-        httpOnly: true,  // JavaScript cannot touch this (More secure)
-        path: '/',       // Valid for the whole site
-        maxAge: 60 * 60 * 24 * 7, // 1 week
-        sameSite: 'lax', // Needed for redirects to work
+        httpOnly: true,  // Important: JavaScript CANNOT see this (Secure)
+        path: '/',       // Works on all pages
+        maxAge: 60 * 60 * 24 * 7, // 1 Week
+        sameSite: 'lax', // Needed for navigation to work
+        secure: process.env.NODE_ENV === 'production', // Only secure on live site
       });
 
       return response;

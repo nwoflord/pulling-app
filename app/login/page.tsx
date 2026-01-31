@@ -1,10 +1,9 @@
 'use client';
 import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 function LoginContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -13,7 +12,6 @@ function LoginContent() {
     setLoading(true);
 
     try {
-      // 1. Verify Password
       const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -23,43 +21,27 @@ function LoginContent() {
       const data = await res.json();
 
       if (data.success && data.role) {
-        // 2. NUKE: Delete any possible conflicting cookies
-        document.cookie = "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-        document.cookie = "auth=; path=/admin; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-
-        // 3. SET: Force the new cookie
-        // Note: We use 'Lax' to ensure it works in most modern browser contexts
-        document.cookie = `auth=${data.role}; path=/; max-age=604800; SameSite=Lax`;
-
-        // 4. VERIFY: Did it stick?
-        if (document.cookie.includes('auth=')) {
-           // Cookie is there, safe to redirect
-           const destination = getDestination(data.role);
-           window.location.href = destination; 
-        } else {
-           // Cookie failed to set (Browser blocking it?)
-           alert("Browser blocked the login cookie. Please enable cookies for this site.");
-           setLoading(false);
-        }
+        // SUCCESS: The Server has already set the cookie header.
+        // We do NOT need to check document.cookie (it won't show up there anyway).
         
+        // Just force the navigation to the correct page.
+        let destination = '/';
+        if (data.role === 'admin') destination = '/admin';
+        else if (data.role === 'official') destination = '/trackside';
+        else if (data.role === 'lineup') destination = '/lineup';
+        else if (data.role === 'announcer') destination = '/announcer';
+        else if (data.role === 'registration') destination = '/registration';
+        
+        // Hard Reload to apply the new cookie
+        window.location.href = destination; 
       } else {
         alert("Incorrect Access Code");
         setLoading(false);
       }
     } catch (error) {
-      console.error(error);
       alert("System Error");
       setLoading(false);
     }
-  };
-
-  const getDestination = (role: string) => {
-    if (role === 'admin') return '/admin';
-    if (role === 'official') return '/trackside';
-    if (role === 'lineup') return '/lineup';
-    if (role === 'announcer') return '/announcer';
-    if (role === 'registration') return '/registration';
-    return '/';
   };
 
   return (
