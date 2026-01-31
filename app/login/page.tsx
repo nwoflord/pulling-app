@@ -7,12 +7,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // ... inside app/login/page.tsx
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-        // Send code to API for verification
         const res = await fetch('/api/settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -22,16 +23,17 @@ export default function Login() {
         const data = await res.json();
 
         if (data.success && data.role) {
-            // Set Cookie based on the role returned from DB
-            document.cookie = `auth=${data.role}; path=/;`;
+            // 1. Set the cookie manually to be safe
+            document.cookie = `auth=${data.role}; path=/; max-age=604800; SameSite=Lax`;
             
-            // Route to correct page
-            if (data.role === 'admin') router.push('/admin');
-            else if (data.role === 'official') router.push('/trackside');
-            else if (data.role === 'lineup') router.push('/lineup');
-            else if (data.role === 'announcer') router.push('/announcer');
-            else if (data.role === 'registration') router.push('/registration');
-            else router.push('/'); // Fallback
+            // 2. FORCE RELOAD (Fixes the hanging spinner)
+            // Use window.location.href instead of router.push
+            if (data.role === 'admin') window.location.href = '/admin';
+            else if (data.role === 'official') window.location.href = '/trackside';
+            else if (data.role === 'lineup') window.location.href = '/lineup';
+            else if (data.role === 'announcer') window.location.href = '/announcer';
+            else if (data.role === 'registration') window.location.href = '/registration';
+            else window.location.href = '/'; 
             
         } else {
             alert("Invalid Access Code");
