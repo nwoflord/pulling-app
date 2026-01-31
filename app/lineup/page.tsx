@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 
 export default function LineupPage() {
   const [classes, setClasses] = useState<any[]>([]);
@@ -111,6 +110,14 @@ export default function LineupPage() {
       return <span className="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-1 rounded border border-blue-200">R{info.round} - Hook {info.matchNum}</span>;
   };
 
+  // --- NEW SECURE LOGOUT LOGIC ---
+  const handleLogout = async () => {
+    // 1. Tell server to destroy cookie
+    await fetch('/api/logout', { method: 'POST' });
+    // 2. Hard redirect to public menu
+    window.location.href = '/';
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-white font-sans overflow-hidden flex flex-col">
       <div className="bg-slate-800 p-4 shadow-md flex justify-between items-center z-10">
@@ -120,7 +127,14 @@ export default function LineupPage() {
                 {classes.map(c => <option key={c.class_id} value={c.class_id}>{c.name}</option>)}
             </select>
         </div>
-        <Link href="/" className="text-slate-400 text-xs font-bold uppercase hover:text-white">Exit</Link>
+        
+        {/* REPLACED LINK WITH SECURE EXIT BUTTON */}
+        <button 
+            onClick={handleLogout}
+            className="text-xs font-bold text-slate-500 hover:text-white border border-slate-700 hover:border-white px-2 py-1 rounded transition-colors uppercase"
+        >
+            Exit & Lock
+        </button>
       </div>
 
       <div className="flex-grow grid grid-cols-3 gap-1 p-2 h-full overflow-hidden">

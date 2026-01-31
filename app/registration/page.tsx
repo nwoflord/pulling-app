@@ -149,13 +149,14 @@ export default function RegistrationStation() {
     refreshData();
   };
 
-  const handleLogout = () => {
-    document.cookie = "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-    router.push('/');
-    router.refresh();
+  // --- NEW SECURE LOGOUT LOGIC ---
+  const handleLogout = async () => {
+    // 1. Tell server to destroy cookie
+    await fetch('/api/logout', { method: 'POST' });
+    // 2. Hard redirect to public menu
+    window.location.href = '/';
   };
 
-  // THIS WAS THE FUNCTION WITH THE TYPO IN THE JSX
   const toggleTargetClass = (c: any) => {
     // LOCK CHECK
     if (c.is_locked) {
@@ -203,8 +204,12 @@ export default function RegistrationStation() {
                 <span className="absolute left-3 top-2.5 text-slate-400">🔍</span>
             </div>
 
-            <button onClick={handleLogout} className="text-xs font-bold text-red-400 hover:text-red-300 border border-red-900 hover:border-red-400 px-3 py-1 rounded transition-colors uppercase">
-                Log Out
+            {/* SECURE EXIT BUTTON */}
+            <button 
+                onClick={handleLogout} 
+                className="text-xs font-bold text-slate-500 hover:text-white border border-slate-700 hover:border-white px-2 py-1 rounded transition-colors uppercase"
+            >
+                Exit & Lock
             </button>
         </div>
       </div>
@@ -231,7 +236,6 @@ export default function RegistrationStation() {
                                     <input 
                                         type="checkbox" 
                                         checked={targetClassIds.includes(c.class_id)}
-                                        // FIX: Changed 'toggleClass' to 'toggleTargetClass'
                                         onChange={() => toggleTargetClass(c)}
                                         disabled={isLocked}
                                         className="w-4 h-4 text-blue-600 rounded disabled:opacity-50"

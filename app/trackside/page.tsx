@@ -63,11 +63,13 @@ export default function TracksideScreen() {
     }
   };
 
-  // --- LOGOUT LOGIC ---
-  const handleLogout = () => {
-    document.cookie = "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-    router.push('/');
-    router.refresh();
+  // --- NEW SECURE LOGOUT LOGIC ---
+  const handleLogout = async () => {
+    // 1. Tell the server to delete the cookie
+    await fetch('/api/logout', { method: 'POST' });
+    
+    // 2. Force reload to the main menu (clears session memory)
+    window.location.href = '/';
   };
 
   return (
@@ -83,7 +85,7 @@ export default function TracksideScreen() {
                 onClick={handleLogout}
                 className="text-xs font-bold text-slate-500 hover:text-white border border-slate-700 hover:border-white px-2 py-1 rounded transition-colors uppercase"
             >
-                Exit
+                Exit & Lock
             </button>
         </div>
 

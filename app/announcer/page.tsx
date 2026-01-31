@@ -53,10 +53,12 @@ export default function AnnouncerScreen() {
   const activeHook = activeHookId ? processedHooks.find(h => h.hook_id === activeHookId) : readyMatches[0];
   const currentClass = classes.find(c => c.class_id === selectedClassId);
 
-  const handleLogout = () => {
-    document.cookie = "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-    router.push('/');
-    router.refresh();
+  // --- NEW SECURE LOGOUT LOGIC ---
+  const handleLogout = async () => {
+    // 1. Tell server to destroy cookie
+    await fetch('/api/logout', { method: 'POST' });
+    // 2. Hard redirect to public menu
+    window.location.href = '/';
   };
 
   // --- SPONSOR LOGIC ---
@@ -155,8 +157,13 @@ export default function AnnouncerScreen() {
                         {classes.map(c => <option key={c.class_id} value={c.class_id}>{c.name}</option>)}
                     </select>
                  )}
-                 <button onClick={handleLogout} className="text-xs font-bold text-slate-500 hover:text-white border border-slate-700 hover:border-white px-3 py-2 rounded transition-colors uppercase">
-                    Sign Out
+                 
+                 {/* SECURE EXIT BUTTON */}
+                 <button 
+                    onClick={handleLogout} 
+                    className="text-xs font-bold text-slate-500 hover:text-white border border-slate-700 hover:border-white px-2 py-1 rounded transition-colors uppercase"
+                 >
+                    Exit & Lock
                  </button>
             </div>
         </div>
