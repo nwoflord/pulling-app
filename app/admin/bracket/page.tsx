@@ -269,7 +269,7 @@ export default function BracketManager() {
                                             onClick={() => handleWin(selectedHook, selectedHook.entry1_id)}
                                             className="flex-grow bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded shadow text-left px-4"
                                         >
-                                            Win: #{selectedHook.truck1_number}
+                                            Win: #{selectedHook.truck1_number} - {selectedHook.driver1_name}
                                         </button>
                                         {selectedHook.status1 === 'scratched' ? (
                                             <button 
@@ -295,7 +295,7 @@ export default function BracketManager() {
                                             onClick={() => handleWin(selectedHook, selectedHook.entry2_id)}
                                             className="flex-grow bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded shadow text-left px-4"
                                         >
-                                            Win: #{selectedHook.truck2_number}
+                                            Win: #{selectedHook.truck2_number} - {selectedHook.driver2_name}
                                         </button>
                                         {selectedHook.status2 === 'scratched' ? (
                                             <button 
