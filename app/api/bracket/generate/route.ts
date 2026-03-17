@@ -90,18 +90,19 @@ export async function POST(request: Request) {
         
         if (isByeMatch[i]) {
             // BYE match
-            const entryA = entries[entryIndex++];
+            const entryA = entries[entryIndex];
+            entryIndex += 1; // Increment single entry usage
             
             // Set truck in Round 1 and instantly declare it the winner
             await db.query(
                 `UPDATE hooks 
                  SET entry1_id = $1, winner_entry_id = $1, match_order = $2 
                  WHERE hook_id = $3`,
-                [entryA.entry_id, globalMatchOrder++, hook.hook_id]
+                [entryA?.entry_id || null, globalMatchOrder++, hook.hook_id]
             );
 
             // Cascade this BYE winner to Round 2 immediately
-            if (hook.next_hook_id) {
+            if (hook.next_hook_id && entryA) {
                 const posField = i % 2 === 0 ? 'entry1_id' : 'entry2_id';
                 await db.query(
                     `UPDATE hooks SET ${posField} = $1 WHERE hook_id = $2`,
@@ -111,13 +112,15 @@ export async function POST(request: Request) {
             
         } else {
             // Regular match
-            const entryA = entries[entryIndex++];
-            const entryB = entries[entryIndex++];
+            const entryA = entries[entryIndex];
+            const entryB = entries[entryIndex + 1];
+            entryIndex += 2; // Increment double entry usage
+            
             await db.query(
                 `UPDATE hooks 
                  SET entry1_id = $1, entry2_id = $2, match_order = $3 
                  WHERE hook_id = $4`,
-                [entryA.entry_id, entryB.entry_id, globalMatchOrder++, hook.hook_id]
+                [entryA?.entry_id || null, entryB?.entry_id || null, globalMatchOrder++, hook.hook_id]
             );
         }
     }
