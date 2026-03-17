@@ -180,42 +180,112 @@ export default function PitScreen() {
                 <div className="flex-1 bg-slate-950 p-4 md:p-6 overflow-auto relative">
                       <div className="flex h-full min-h-[400px] md:min-h-[600px] pl-2 md:pl-4">
                         
-                        {uniqueRounds.map((round) => {
-                            const isFirstRound = round === 1;
-                            const isLastRound = round === maxRound;
+                        {(() => {
+                            // Calculate proper number of rounds based on round 1 participants
+                            const round1MatchesCount = hooks.filter(h => h.round === 1).length;
+                            // Add Math.max to prevent log2(0) and log2(1) resolving weirdly when DB hooks fall below 2
+                            const baseCount = Math.max(round1MatchesCount, 1);
                             
-                            return (
-                                <div key={round} className="flex flex-col h-full mr-8 md:mr-12 min-w-[120px] md:min-w-[140px]">
-                                    <div className="text-center font-bold text-blue-500 uppercase tracking-widest text-xs md:text-sm mb-4 border-b border-slate-800 pb-2">
-                                        {getRoundLabel(round)}
-                                    </div>
-                                    
-                                    <div className="flex flex-col justify-around flex-grow gap-2">
-                                        {hooks
-                                            .filter(h => h.round === round)
-                                            .sort((a,b) => a.match_order - b.match_order)
-                                            .map((hook) => (
-                                            <div key={hook.hook_id} className="flex flex-col gap-1 relative justify-center flex-1">
+                            // If we have 2 round 1 matches, it's 2 total rounds (Semis & Finals)
+                            // If we have 4 round 1 matches, it's 3 total rounds (Qtrs, Semis, Finals)
+                            // So we need Math.ceil(Math.log2(round1MatchesCount * 2)) basically.
+                            let calculatedRounds = Math.ceil(Math.log2(baseCount * 2));
+                            if (calculatedRounds < 1) calculatedRounds = 1;
+                            
+                            const getDynamicLabel = (r: number, total: number) => {
+                                if (r === total) return "Finals";
+                                if (r === total - 1 && total > 1) return "Semi Finals";
+                                if (r === total - 2 && total > 2) return "Quarter Finals";
+                                return `Round ${r}`;
+                            };
+
+                            const roundColumns = [];
+                            
+                            for (let roundNum = 1; roundNum <= calculatedRounds; roundNum++) {
+                                const isFirstRound = roundNum === 1;
+                                const isLastRound = roundNum === calculatedRounds;
+                                
+                                // Fetch real DB hooks for this round
+                                let roundHooks = hooks
+                                    .filter(h => h.round === roundNum)
+                                    .sort((a,b) => a.match_order - b.match_order);
+                                
+                                // How many total expected brackets in this column? 
+                                // Round 1 = baseCount. Round 2 = baseCount/2. Round 3 = baseCount/4...
+                                // Handle edge case: baseCount starts odd (e.g. 3). Round 2 needs 2. Round 3 needs 1.
+                                const expectedBracketCount = Math.pow(2, calculatedRounds - roundNum);
+
+                                // Inject dummy matchups so the grid always fills visual layout space structurally
+                                const renderedHooks = [];
+                                for (let i = 0; i < expectedBracketCount; i++) {
+                                    if (roundHooks[i]) {
+                                         renderedHooks.push(roundHooks[i]);
+                                    } else {
+                                         // Provide unique fake key so it maps without warnings
+                                         renderedHooks.push({ hook_id: `dummy-${roundNum}-${i}`, round: roundNum, dummy: true });
+                                    }
+                                }
+
+                                roundColumns.push(
+                                    <div key={roundNum} className="flex flex-col h-full mr-8 md:mr-16 min-w-[140px] md:min-w-[180px]">
+                                        <div className="text-center font-bold text-blue-500 uppercase tracking-widest text-xs md:text-sm mb-4 border-b border-slate-800 pb-2 flex-shrink-0">
+                                            {getDynamicLabel(roundNum, calculatedRounds)}
+                                        </div>
+                                        
+                                        <div className="flex flex-col justify-around flex-grow gap-2">
+                                            {renderedHooks.map((hook, idx) => {
                                                 
-                                                {!isFirstRound && (
-                                                    <div className="absolute top-1/2 left-[-16px] md:left-[-24px] w-4 md:w-6 border-b-2 border-slate-600 opacity-50"></div>
-                                                )}
-
-                                                <BracketBox hook={hook} truckNum={1} />
-                                                <BracketBox hook={hook} truckNum={2} />
-
-                                                {!isLastRound && (
-                                                    <>
-                                                        <div className="absolute top-1/2 right-[-16px] md:right-[-24px] w-4 md:w-6 h-[50%] border-r-2 border-slate-600 rounded-tr-lg translate-y-0 opacity-50"></div>
-                                                        <div className="absolute bottom-1/2 right-[-16px] md:right-[-24px] w-4 md:w-6 h-[50%] border-r-2 border-slate-600 rounded-br-lg translate-y-0 opacity-50"></div>
-                                                    </>
-                                                )}
-                                            </div>
-                                            ))}
+                                                // Drawing Tree Logic
+                                                // Even indices go down to meet odd indices.
+                                                // Since flex places them, we will use pseudo-styling on container edges
+                                                const isTopNodeOfPair = idx % 2 === 0;
+                                                
+                                                return (
+                                                  <div key={hook.hook_id} className="flex flex-col gap-1 relative justify-center flex-1 w-full">
+                                                      
+                                                      {/* INCOMING LINE from Left (Not on Round 1) */}
+                                                      {!isFirstRound && (
+                                                          <div className="absolute top-1/2 left-[-16px] md:left-[-32px] w-4 md:w-8 border-b-2 border-green-500/50"></div>
+                                                      )}
+      
+                                                      {/* BRACKET BOXES */}
+                                                      {hook.dummy ? (
+                                                          <>
+                                                              <BracketBox hook={null} truckNum={1} />
+                                                              <BracketBox hook={null} truckNum={2} />
+                                                          </>
+                                                      ) : (
+                                                          <>
+                                                              <BracketBox hook={hook} truckNum={1} />
+                                                              <BracketBox hook={hook} truckNum={2} />
+                                                          </>
+                                                      )}
+      
+                                                      {/* OUTGOING LINES to Right (Not on Final Round) */}
+                                                      {!isLastRound && (
+                                                          <>
+                                                              {/* Horizontal Stub Out */}
+                                                              <div className="absolute top-1/2 right-[-8px] md:right-[-16px] w-2 md:w-4 border-b-2 border-slate-600"></div>
+                                                              
+                                                              {/* Vertical Drop / Rise */}
+                                                              {isTopNodeOfPair ? (
+                                                                  // I am top: go down
+                                                                  <div className="absolute top-1/2 right-[-8px] md:right-[-16px] w-2 md:w-4 border-r-2 border-slate-600 h-[100%]"></div>
+                                                              ) : (
+                                                                  // I am bottom: go up
+                                                                  <div className="absolute bottom-1/2 right-[-8px] md:right-[-16px] w-2 md:w-4 border-r-2 border-slate-600 h-[100%]"></div>
+                                                              )}
+                                                          </>
+                                                      )}
+                                                  </div>
+                                                )
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            }
+                            return roundColumns;
+                        })()}
 
                      </div>
                 </div>
