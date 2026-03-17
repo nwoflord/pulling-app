@@ -69,9 +69,9 @@ export async function POST(request: Request) {
 
             // Create the record in DB
             const res = await db.query(
-                `INSERT INTO hooks (class_id, round, next_hook_id, bracket_position) 
-                 VALUES ($1, $2, $3, $4) RETURNING hook_id`,
-                [class_id, r, nextHookId, bracketObjPos]
+                `INSERT INTO hooks (class_id, round, next_hook_id, bracket_position, match_order) 
+                 VALUES ($1, $2, $3, $4, $5) RETURNING hook_id`,
+                [class_id, r, nextHookId, bracketObjPos, m]
             );
 
             hooksByRound[r].push({
