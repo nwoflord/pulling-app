@@ -48,11 +48,11 @@ export async function POST(request: Request) {
     // to easily assign `next_hook_id` to the earlier rounds.
     // Store hooks by round: hooksByRound[roundNum] = array of hook objects
     const hooksByRound: Record<number, any[]> = {};
-    let globalMatchOrder = 1;
 
     for (let r = totalRounds; r >= 1; r--) {
         hooksByRound[r] = [];
         const matchesInRound = Math.pow(2, totalRounds - r);
+        const startingMatchOrder = p - (p / Math.pow(2, r - 1)) + 1;
 
         for (let m = 0; m < matchesInRound; m++) {
             
@@ -68,11 +68,12 @@ export async function POST(request: Request) {
             }
 
             // Create the record in DB
-            // FIX: We must supply match_order initially to prevent Postgres NOT NULL constraint crashes
+            // Assign exactly unique match sequences (1 to P-1) to avoid db UNIQUE constraints
+            const actualOrder = startingMatchOrder + m;
             const res = await db.query(
                 `INSERT INTO hooks (class_id, round, next_hook_id, bracket_position, match_order) 
                  VALUES ($1, $2, $3, $4, $5) RETURNING hook_id`,
-                [class_id, r, nextHookId, bracketObjPos, m + 1]
+                [class_id, r, nextHookId, bracketObjPos, actualOrder]
             );
 
             hooksByRound[r].push({
@@ -97,9 +98,9 @@ export async function POST(request: Request) {
             // Set truck in Round 1 and instantly declare it the winner
             await db.query(
                 `UPDATE hooks 
-                 SET entry1_id = $1, winner_entry_id = $1, match_order = $2 
-                 WHERE hook_id = $3`,
-                [entryA?.entry_id || null, globalMatchOrder++, hook.hook_id]
+                 SET entry1_id = $1, winner_entry_id = $1 
+                 WHERE hook_id = $2`,
+                [entryA?.entry_id || null, hook.hook_id]
             );
 
             // Cascade this BYE winner to Round 2 immediately
@@ -119,9 +120,9 @@ export async function POST(request: Request) {
             
             await db.query(
                 `UPDATE hooks 
-                 SET entry1_id = $1, entry2_id = $2, match_order = $3 
-                 WHERE hook_id = $4`,
-                [entryA?.entry_id || null, entryB?.entry_id || null, globalMatchOrder++, hook.hook_id]
+                 SET entry1_id = $1, entry2_id = $2 
+                 WHERE hook_id = $3`,
+                [entryA?.entry_id || null, entryB?.entry_id || null, hook.hook_id]
             );
         }
     }
@@ -132,6 +133,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error("GENERATION ERROR:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
