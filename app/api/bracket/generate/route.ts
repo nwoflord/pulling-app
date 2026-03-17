@@ -25,20 +25,41 @@ export async function POST(request: Request) {
     // Shuffle entries (Randomize the bracket)
     entries = entries.sort(() => Math.random() - 0.5);
 
-    // Create Pairings (Round 1)
+    // Calculate Power of 2 Bracket Size
+    let p = 2;
+    while (p < entries.length) p *= 2;
+    
+    const numByes = p - entries.length;
+    const totalMatches = p / 2;
+
+    // Distribute BYEs evenly across the first round
+    const isByeMatch = new Array(totalMatches).fill(false);
+    if (numByes > 0) {
+        const step = totalMatches / numByes;
+        for (let i = 0; i < numByes; i++) {
+            isByeMatch[Math.floor(i * step)] = true;
+        }
+    }
+
     let matchOrder = 1;
-    for (let i = 0; i < entries.length; i += 2) {
-        if (i + 1 < entries.length) {
-            // Standard Pair (Truck A vs Truck B)
-            await db.query(
-                `INSERT INTO hooks (class_id, round, match_order, entry1_id, entry2_id) VALUES ($1, $2, $3, $4, $5)`,
-                [class_id, 1, matchOrder++, entries[i].entry_id, entries[i+1].entry_id]
-            );
-        } else {
-            // Odd Truck Out (BYE) - Automatically set them as the winner of this match
+    let entryIndex = 0;
+
+    // Create Pairings (Round 1)
+    for (let i = 0; i < totalMatches; i++) {
+        if (isByeMatch[i]) {
+            // BYE match
+            const entryA = entries[entryIndex++];
             await db.query(
                 `INSERT INTO hooks (class_id, round, match_order, entry1_id, winner_entry_id) VALUES ($1, $2, $3, $4, $5)`,
-                [class_id, 1, matchOrder++, entries[i].entry_id, entries[i].entry_id]
+                [class_id, 1, matchOrder++, entryA.entry_id, entryA.entry_id]
+            );
+        } else {
+            // Regular match
+            const entryA = entries[entryIndex++];
+            const entryB = entries[entryIndex++];
+            await db.query(
+                `INSERT INTO hooks (class_id, round, match_order, entry1_id, entry2_id) VALUES ($1, $2, $3, $4, $5)`,
+                [class_id, 1, matchOrder++, entryA.entry_id, entryB.entry_id]
             );
         }
     }
