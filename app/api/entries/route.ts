@@ -110,7 +110,16 @@ export async function PUT(request: Request) {
         return NextResponse.json({ success: true });
     }
 
-    // CASE 4: ASSIGN FINISH POSITION (Reports)
+    // CASE 4: UNSCRATCH ACTION (Admin Bracket)
+    if (body.action === 'unscratch' && body.entry_id) {
+        await db.query(
+            "UPDATE entries SET status = 'active' WHERE entry_id = $1",
+            [body.entry_id]
+        );
+        return NextResponse.json({ success: true });
+    }
+
+    // CASE 5: ASSIGN FINISH POSITION (Reports)
     if (body.action === 'update_finish' && body.entry_id) {
         await db.query(
             'UPDATE entries SET finish_position = $1 WHERE entry_id = $2',

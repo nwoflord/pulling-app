@@ -96,6 +96,19 @@ export default function BracketManager() {
     }
   };
 
+  const handleUnscratch = async (entryId: string) => {
+    if (!confirm("Are you sure you want to UNSCRATCH this entry? It will restore their active status.")) return;
+
+    await fetch('/api/entries', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unscratch', entry_id: entryId })
+    });
+
+    fetchHooks();
+    setSelectedHook(null);
+  };
+
   const rounds: Record<number, any[]> = {};
   hooks.forEach(h => {
     if (!rounds[h.round]) rounds[h.round] = [];
@@ -258,12 +271,21 @@ export default function BracketManager() {
                                         >
                                             Win: #{selectedHook.truck1_number}
                                         </button>
-                                        <button 
-                                            onClick={() => handleScratch(selectedHook.entry1_id, selectedHook.entry2_id, selectedHook)}
-                                            className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-4 rounded text-xs uppercase"
-                                        >
-                                            Scratch
-                                        </button>
+                                        {selectedHook.status1 === 'scratched' ? (
+                                            <button 
+                                                onClick={() => handleUnscratch(selectedHook.entry1_id)}
+                                                className="bg-green-50 hover:bg-green-100 text-green-700 border border-green-300 font-bold px-4 rounded text-xs uppercase"
+                                            >
+                                                Unscratch
+                                            </button>
+                                        ) : (
+                                            <button 
+                                                onClick={() => handleScratch(selectedHook.entry1_id, selectedHook.entry2_id, selectedHook)}
+                                                className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-4 rounded text-xs uppercase"
+                                            >
+                                                Scratch
+                                            </button>
+                                        )}
                                     </div>
                                 )}
 
@@ -275,12 +297,21 @@ export default function BracketManager() {
                                         >
                                             Win: #{selectedHook.truck2_number}
                                         </button>
-                                        <button 
-                                            onClick={() => handleScratch(selectedHook.entry2_id, selectedHook.entry1_id, selectedHook)}
-                                            className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-4 rounded text-xs uppercase"
-                                        >
-                                            Scratch
-                                        </button>
+                                        {selectedHook.status2 === 'scratched' ? (
+                                            <button 
+                                                onClick={() => handleUnscratch(selectedHook.entry2_id)}
+                                                className="bg-green-50 hover:bg-green-100 text-green-700 border border-green-300 font-bold px-4 rounded text-xs uppercase"
+                                            >
+                                                Unscratch
+                                            </button>
+                                        ) : (
+                                            <button 
+                                                onClick={() => handleScratch(selectedHook.entry2_id, selectedHook.entry1_id, selectedHook)}
+                                                className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-4 rounded text-xs uppercase"
+                                            >
+                                                Scratch
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>
