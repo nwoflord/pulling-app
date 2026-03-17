@@ -84,7 +84,8 @@ export async function POST(request: Request) {
 
             hooksByRound[r].push({
                 hook_id: res.rows[0].hook_id,
-                match_index: m
+                match_index: m,
+                next_hook_id: nextHookId
             });
         }
     }
