@@ -37,7 +37,7 @@ export async function POST(request: Request) {
         } else {
             // Odd Truck Out (BYE) - Automatically set them as the winner of this match
             await db.query(
-                `INSERT INTO hooks (class_id, round, match_order, entry1_id, winner_entry_id) VALUES ($1, $2, $3, $4, $4)`,
+                `INSERT INTO hooks (class_id, round, match_order, entry1_id, winner_entry_id) VALUES ($1, $2, $3, $4, $5)`,
                 [class_id, 1, matchOrder++, entries[i].entry_id, entries[i].entry_id]
             );
         }
