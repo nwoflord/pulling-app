@@ -67,7 +67,7 @@ export async function POST(request: Request) {
             if (r < totalRounds) {
                  const parentMatch = hooksByRound[r + 1][Math.floor(m / 2)];
                  nextHookId = parentMatch.hook_id;
-                 bracketObjPos = m % 2 === 0 ? 'top' : 'bottom';
+                 bracketObjPos = m % 2 === 0 ? 1 : 2;
             }
 
             // Create the record in DB
