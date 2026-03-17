@@ -43,6 +43,7 @@ export async function POST(request: Request) {
     }
 
     let entryIndex = 0;
+    console.log("Starting bracket generation. Entries:", entries.length, "Power:", p);
     
     // We will build the bracket tree from Finals down to Round 1 
     // to easily assign `next_hook_id` to the earlier rounds.
@@ -54,6 +55,8 @@ export async function POST(request: Request) {
         const matchesInRound = Math.pow(2, totalRounds - r);
         const startingMatchOrder = p - (p / Math.pow(2, r - 1)) + 1;
 
+        console.log("Building Round", r, "Matches:", matchesInRound, "Starting Order:", startingMatchOrder);
+        
         for (let m = 0; m < matchesInRound; m++) {
             
             // If we are not the final round, we have a "next" hook (our parent in the tree)
@@ -70,6 +73,9 @@ export async function POST(request: Request) {
             // Create the record in DB
             // Assign exactly unique match sequences (1 to P-1) to avoid db UNIQUE constraints
             const actualOrder = startingMatchOrder + m;
+            
+            console.log("  Inserting match_order:", actualOrder, "next_hook_id:", nextHookId);
+            
             const res = await db.query(
                 `INSERT INTO hooks (class_id, round, next_hook_id, bracket_position, match_order) 
                  VALUES ($1, $2, $3, $4, $5) RETURNING hook_id`,
@@ -83,6 +89,8 @@ export async function POST(request: Request) {
         }
     }
 
+    console.log("Empty hooks tree generated successfully. Slotting trucks into Round 1");
+
     // Now that the empty tree exists, let's slot the trucks into Round 1
     // and naturally cascade BYEs forward.
     const round1Hooks = hooksByRound[1];
@@ -94,6 +102,7 @@ export async function POST(request: Request) {
             // BYE match
             const entryA = entries[entryIndex];
             entryIndex++; 
+            console.log("Slotting BYE for entry index", entryIndex, "Hook ID:", hook.hook_id);
             
             // Set truck in Round 1 and instantly declare it the winner
             await db.query(
@@ -105,6 +114,7 @@ export async function POST(request: Request) {
 
             // Cascade this BYE winner to Round 2 immediately
             if (hook.next_hook_id && entryA) {
+                console.log("Advancing BYE winner to next_hook_id", hook.next_hook_id);
                 const posField = i % 2 === 0 ? 'entry1_id' : 'entry2_id';
                 await db.query(
                     `UPDATE hooks SET ${posField} = $1 WHERE hook_id = $2`,
@@ -117,6 +127,7 @@ export async function POST(request: Request) {
             const entryA = entries[entryIndex];
             const entryB = entries[entryIndex + 1];
             entryIndex += 2; 
+            console.log("Slotting regular match", entryA?.entry_id, "vs", entryB?.entry_id, "Hook ID:", hook.hook_id);
             
             await db.query(
                 `UPDATE hooks 
@@ -127,10 +138,13 @@ export async function POST(request: Request) {
         }
     }
 
+    console.log("Round 1 generation complete. Locking class.");
+    
     // --- 3. LOCK THE CLASS ---
     // This prevents new registrations while the bracket is active
     await db.query('UPDATE classes SET is_locked = TRUE WHERE class_id = $1', [class_id]);
 
+    console.log("Bracket Generation Finished Successfully.");
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("GENERATION ERROR:", error);
