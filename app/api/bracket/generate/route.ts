@@ -30,36 +30,94 @@ export async function POST(request: Request) {
     while (p < entries.length) p *= 2;
     
     const numByes = p - entries.length;
-    const totalMatches = p / 2;
+    const totalMatchesR1 = p / 2;
+    const totalRounds = Math.log2(p);
 
     // Distribute BYEs evenly across the first round
-    const isByeMatch = new Array(totalMatches).fill(false);
+    const isByeMatch = new Array(totalMatchesR1).fill(false);
     if (numByes > 0) {
-        const step = totalMatches / numByes;
+        const step = totalMatchesR1 / numByes;
         for (let i = 0; i < numByes; i++) {
             isByeMatch[Math.floor(i * step)] = true;
         }
     }
 
-    let matchOrder = 1;
     let entryIndex = 0;
+    
+    // We will build the bracket tree from Finals down to Round 1 
+    // to easily assign `next_hook_id` to the earlier rounds.
+    // Store hooks by round: hooksByRound[roundNum] = array of hook objects
+    const hooksByRound: Record<number, any[]> = {};
+    let globalMatchOrder = 1;
 
-    // Create Pairings (Round 1)
-    for (let i = 0; i < totalMatches; i++) {
+    for (let r = totalRounds; r >= 1; r--) {
+        hooksByRound[r] = [];
+        const matchesInRound = Math.pow(2, totalRounds - r);
+
+        for (let m = 0; m < matchesInRound; m++) {
+            
+            // If we are not the final round, we have a "next" hook (our parent in the tree)
+            // The parent match index in the previous array is Math.floor(m / 2)
+            let nextHookId = null;
+            let bracketObjPos = null;
+            
+            if (r < totalRounds) {
+                 const parentMatch = hooksByRound[r + 1][Math.floor(m / 2)];
+                 nextHookId = parentMatch.hook_id;
+                 bracketObjPos = m % 2 === 0 ? 'top' : 'bottom';
+            }
+
+            // Create the record in DB
+            const res = await db.query(
+                `INSERT INTO hooks (class_id, round, next_hook_id, bracket_position) 
+                 VALUES ($1, $2, $3, $4) RETURNING hook_id`,
+                [class_id, r, nextHookId, bracketObjPos]
+            );
+
+            hooksByRound[r].push({
+                hook_id: res.rows[0].hook_id,
+                match_index: m
+            });
+        }
+    }
+
+    // Now that the empty tree exists, let's slot the trucks into Round 1
+    // and naturally cascade BYEs forward.
+    const round1Hooks = hooksByRound[1];
+
+    for (let i = 0; i < totalMatchesR1; i++) {
+        const hook = round1Hooks[i];
+        
         if (isByeMatch[i]) {
             // BYE match
             const entryA = entries[entryIndex++];
+            
+            // Set truck in Round 1 and instantly declare it the winner
             await db.query(
-                `INSERT INTO hooks (class_id, round, match_order, entry1_id, winner_entry_id) VALUES ($1, $2, $3, $4, $5)`,
-                [class_id, 1, matchOrder++, entryA.entry_id, entryA.entry_id]
+                `UPDATE hooks 
+                 SET entry1_id = $1, winner_entry_id = $1, match_order = $2 
+                 WHERE hook_id = $3`,
+                [entryA.entry_id, globalMatchOrder++, hook.hook_id]
             );
+
+            // Cascade this BYE winner to Round 2 immediately
+            if (hook.next_hook_id) {
+                const posField = i % 2 === 0 ? 'entry1_id' : 'entry2_id';
+                await db.query(
+                    `UPDATE hooks SET ${posField} = $1 WHERE hook_id = $2`,
+                    [entryA.entry_id, hook.next_hook_id]
+                );
+            }
+            
         } else {
             // Regular match
             const entryA = entries[entryIndex++];
             const entryB = entries[entryIndex++];
             await db.query(
-                `INSERT INTO hooks (class_id, round, match_order, entry1_id, entry2_id) VALUES ($1, $2, $3, $4, $5)`,
-                [class_id, 1, matchOrder++, entryA.entry_id, entryB.entry_id]
+                `UPDATE hooks 
+                 SET entry1_id = $1, entry2_id = $2, match_order = $3 
+                 WHERE hook_id = $4`,
+                [entryA.entry_id, entryB.entry_id, globalMatchOrder++, hook.hook_id]
             );
         }
     }
