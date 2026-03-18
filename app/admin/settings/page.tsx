@@ -47,6 +47,7 @@ export default function SettingsPage() {
 
   const getLabel = (role: string) => {
     switch(role) {
+        case 'superadmin': return 'Master Control (Super Admin)';
         case 'admin': return 'Admin Dashboard';
         case 'official': return 'Trackside Official';
         case 'lineup': return 'Lineup / Staging';

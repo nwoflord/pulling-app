@@ -1,9 +1,18 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 export default function AdminNav() {
   const pathname = usePathname();
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+      fetch('/api/auth/me')
+        .then(res => res.json())
+        .then(data => setRole(data.role))
+        .catch(() => setRole(null));
+  }, []);
 
   const navItems = [
     { name: 'Dashboard', href: '/admin' },
@@ -12,8 +21,11 @@ export default function AdminNav() {
     { name: 'Bracket', href: '/admin/bracket' },
     { name: 'Reports', href: '/admin/reports' },
     { name: 'Sponsors', href: '/admin/sponsors' },
-    { name: 'Settings', href: '/admin/settings' },
   ];
+
+  if (role === 'superadmin') {
+      navItems.push({ name: 'Settings', href: '/admin/settings' });
+  }
 
   const handleLogout = async () => {
     // 1. Tell the server to delete the cookie (Nukes the session)
