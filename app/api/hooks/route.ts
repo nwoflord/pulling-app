@@ -15,9 +15,9 @@ export async function GET(request: Request) {
         h.hook_id, h.round, h.bracket_position, h.next_hook_id, h.winner_entry_id, h.match_order,
         h.entry1_id, h.entry2_id,
         
-        -- INCLUDE STATUS HERE
-        e1.truck_number as truck1_number, e1.driver_name as driver1_name, e1.status as status1,
-        e2.truck_number as truck2_number, e2.driver_name as driver2_name, e2.status as status2,
+        -- INCLUDE STATUS AND METADATA HERE
+        e1.truck_number as truck1_number, e1.driver_name as driver1_name, e1.status as status1, e1.truck_name as truck1_name, e1.hometown as hometown1, e1.info as info1,
+        e2.truck_number as truck2_number, e2.driver_name as driver2_name, e2.status as status2, e2.truck_name as truck2_name, e2.hometown as hometown2, e2.info as info2,
         
         ew.truck_number as winner_number
        FROM hooks h
