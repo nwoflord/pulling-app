@@ -5,6 +5,7 @@ export default function PitScreen() {
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedClassId, setSelectedClassId] = useState('');
   const [hooks, setHooks] = useState<any[]>([]);
+  const [entries, setEntries] = useState<any[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   useEffect(() => {
@@ -20,11 +21,19 @@ export default function PitScreen() {
 
   const fetchBracket = async () => {
     try {
-      const res = await fetch(`/api/hooks?class_id=${selectedClassId}&t=${Date.now()}`);
-      if (res.ok) {
-        setHooks(await res.json());
-        setLastUpdated(new Date());
+      // Fetch Hooks
+      const hooksRes = await fetch(`/api/hooks?class_id=${selectedClassId}&t=${Date.now()}`);
+      if (hooksRes.ok) {
+        setHooks(await hooksRes.json());
       }
+
+      // Fetch Entries for count
+      const entriesRes = await fetch(`/api/entries?class_id=${selectedClassId}`);
+      if (entriesRes.ok) {
+        setEntries(await entriesRes.json());
+      }
+
+      setLastUpdated(new Date());
     } catch(e) { console.error(e); }
   };
 
@@ -33,6 +42,8 @@ export default function PitScreen() {
   const currentMatch = upcomingMatches[0];
   const onDeckMatch = upcomingMatches[1];
   const inTheHoleMatch = upcomingMatches[2];
+
+  const currentClass = classes.find(c => c.class_id === selectedClassId);
 
   // Helper: Status Card (Responsive)
   const StatusCard = ({ match, title, colorClass, isMain = false }: any) => {
@@ -171,6 +182,34 @@ export default function PitScreen() {
                     overflow-x-auto md:overflow-y-auto 
                     z-10 shadow-xl flex-shrink-0
                 ">
+                    {/* NEW CLASS HEADER */}
+                    <div className="
+                        flex flex-col bg-slate-900 border-2 border-slate-700/50 p-4 shadow-xl rounded-xl
+                        /* Mobile: matches StatusCard width for scroll consistency */
+                        w-[85vw] md:w-full h-32 md:h-auto
+                        flex-shrink-0
+                    ">
+                        <div className="text-[10px] font-black uppercase text-blue-400 tracking-[0.2em] mb-1">Current Class</div>
+                        <h2 className="text-xl md:text-3xl font-black text-white leading-tight uppercase mb-1 md:mb-2 italic truncate">
+                            {currentClass?.name || 'Loading...'}
+                        </h2>
+                        
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[8px] md:text-[10px] bg-yellow-500 text-black font-bold px-1.5 rounded">SPONSOR</span>
+                                <span className="text-xs md:text-lg font-bold text-slate-300 truncate">
+                                    {currentClass?.sponsor_name || 'No Sponsor'}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[8px] md:text-[10px] bg-slate-700 text-slate-300 font-bold px-1.5 rounded uppercase">Total Trucks</span>
+                                <span className="text-sm md:text-2xl font-black text-white">
+                                    {entries.length}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
                     <StatusCard match={currentMatch} title="Now Pulling" colorClass="border-green-500" isMain={true} />
                     <StatusCard match={onDeckMatch} title="On Deck" colorClass="border-yellow-500" />
                     <StatusCard match={inTheHoleMatch} title="In The Hole" colorClass="border-red-600" />
