@@ -251,19 +251,19 @@ export default function PitScreen() {
                     {/* NEW CLASS HEADER */}
                     <div className="
                         flex flex-col bg-slate-900 border-2 border-slate-700/50 p-4 shadow-xl rounded-xl
-                        /* Mobile: matches StatusCard width for scroll consistency */
-                        w-[85vw] md:w-full h-32 md:h-auto
+                        /* Mobile: matches StatusCard width for scroll consistency, min-height to handle wrapping */
+                        w-[85vw] md:w-full min-h-[8rem] h-auto
                         flex-shrink-0
                     ">
                         <div className="text-[10px] font-black uppercase text-blue-400 tracking-[0.2em] mb-1">Current Class</div>
-                        <h2 className="text-xl md:text-3xl font-black text-white leading-tight uppercase mb-1 md:mb-2 italic truncate">
+                        <h2 className="text-xl md:text-3xl font-black text-white leading-tight uppercase mb-1 md:mb-2 italic">
                             {currentClass?.name || 'Loading...'}
                         </h2>
                         
                         <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                                <span className="text-[8px] md:text-[10px] bg-yellow-500 text-black font-bold px-1.5 rounded">SPONSOR</span>
-                                <span className="text-xs md:text-lg font-bold text-slate-300 truncate">
+                            <div className="flex items-start gap-2">
+                                <span className="text-[8px] md:text-[10px] bg-yellow-500 text-black font-bold px-1.5 rounded mt-1">SPONSOR</span>
+                                <span className="text-xs md:text-lg font-bold text-slate-300 break-words">
                                     {currentClass?.sponsor_name || 'No Sponsor'}
                                 </span>
                             </div>
