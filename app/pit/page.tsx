@@ -62,26 +62,27 @@ export default function PitScreen() {
          <div className="flex-grow flex flex-col justify-center items-center p-2 text-center">
             {match ? (
                 <>
-                    <div className="flex items-center justify-center gap-2 w-full">
-                        <div className="flex-1">
-                            {/* RESPONSIVE TEXT SIZING */}
-                            <div className={`${isMain ? 'text-4xl md:text-6xl' : 'text-2xl md:text-4xl'} font-black text-white leading-none`}>
-                                #{match.truck1_number || '?'}
+                    <div className="flex flex-col items-center justify-center w-full">
+                        <div className="flex items-center justify-center gap-2 w-full">
+                            <div className="flex-1 flex flex-col items-center">
+                                <div className={`${isMain ? 'text-4xl md:text-6xl' : 'text-2xl md:text-3xl'} font-black text-white leading-none`}>
+                                    #{match.truck1_number || '?'}
+                                </div>
+                                <div className="text-[10px] md:text-xs uppercase text-slate-400 font-bold truncate max-w-full mt-1">
+                                    {match.driver1_name || ''}
+                                </div>
                             </div>
-                        </div>
-                        <div className={`${isMain ? 'text-xl md:text-2xl' : 'text-sm md:text-lg'} font-black italic text-yellow-500`}>VS</div>
-                        <div className="flex-1">
-                            <div className={`${isMain ? 'text-4xl md:text-6xl' : 'text-2xl md:text-4xl'} font-black text-white leading-none`}>
-                                #{match.truck2_number || '?'}
+                            <div className={`${isMain ? 'text-xl md:text-2xl' : 'text-sm md:text-base'} font-black italic text-yellow-500`}>VS</div>
+                            <div className="flex-1 flex flex-col items-center">
+                                <div className={`${isMain ? 'text-4xl md:text-6xl' : 'text-2xl md:text-3xl'} font-black text-white leading-none`}>
+                                    #{match.truck2_number || '?'}
+                                </div>
+                                <div className="text-[10px] md:text-xs uppercase text-slate-400 font-bold truncate max-w-full mt-1">
+                                    {match.driver2_name || ''}
+                                </div>
                             </div>
                         </div>
                     </div>
-                    {isMain && (
-                        <div className="flex justify-between w-full px-2 mt-2 text-[10px] uppercase text-slate-400 font-bold">
-                             <span className="truncate max-w-[45%] text-right">{match.driver1_name}</span>
-                             <span className="truncate max-w-[45%] text-left">{match.driver2_name}</span>
-                        </div>
-                    )}
                 </>
             ) : (
                 <span className="text-slate-500 font-bold italic text-sm">Waiting...</span>
@@ -125,11 +126,18 @@ export default function PitScreen() {
         statusColor = "text-red-300 line-through decoration-2 decoration-red-500";
     }
 
+    const driver = truckNum === 1 ? hook.driver1_name : hook.driver2_name;
+
     return (
-      <div className={`flex items-center justify-center rounded border w-full h-8 md:h-10 transition-all relative ${boxStyle}`}>
-        <span className={`font-black text-sm md:text-lg tracking-tight ${statusColor}`}>
+      <div className={`flex flex-col items-center justify-center rounded border w-full h-10 md:h-12 transition-all relative ${boxStyle}`}>
+        <span className={`font-black text-sm md:text-lg tracking-tight leading-none ${statusColor}`}>
             {displayText}
         </span>
+        {number && (
+            <span className="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase truncate max-w-[90%] mt-0.5">
+                {driver}
+            </span>
+        )}
         {isScratched && (
             <span className="absolute -top-2 -right-1 bg-red-600 text-white text-[8px] font-bold px-1 rounded">
                 SCR
