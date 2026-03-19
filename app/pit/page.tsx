@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function PitScreen() {
   const [classes, setClasses] = useState<any[]>([]);
@@ -7,6 +7,8 @@ export default function PitScreen() {
   const [hooks, setHooks] = useState<any[]>([]);
   const [entries, setEntries] = useState<any[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [isAutoScroll, setIsAutoScroll] = useState(false);
+  const bracketContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch('/api/classes').then(res => res.json()).then(setClasses);
@@ -36,6 +38,52 @@ export default function PitScreen() {
       setLastUpdated(new Date());
     } catch(e) { console.error(e); }
   };
+
+  useEffect(() => {
+    if (!isAutoScroll || !bracketContainerRef.current) return;
+
+    let requestId: number;
+    const container = bracketContainerRef.current;
+    
+    // Use local variables to track scroll position within the animation loop
+    let x = container.scrollLeft;
+    let y = container.scrollTop;
+    
+    const animate = () => {
+        if (!isAutoScroll || !bracketContainerRef.current) return;
+        
+        const maxScrollX = container.scrollWidth - container.clientWidth;
+        const maxScrollY = container.scrollHeight - container.clientHeight;
+
+        if (maxScrollX <= 0 && maxScrollY <= 0) return;
+
+        // Increment positions
+        if (x < maxScrollX) x += 0.5;
+        if (y < maxScrollY) y += 0.2;
+
+        container.scrollLeft = x;
+        container.scrollTop = y;
+
+        // If we've reached the end, wait then reset
+        if (x >= maxScrollX && y >= maxScrollY) {
+            setTimeout(() => {
+                if (!isAutoScroll) return;
+                x = 0;
+                y = 0;
+                container.scrollLeft = 0;
+                container.scrollTop = 0;
+                requestId = requestAnimationFrame(animate);
+            }, 5000);
+        } else {
+            requestId = requestAnimationFrame(animate);
+        }
+    };
+
+    requestId = requestAnimationFrame(animate);
+    return () => {
+        if (requestId) cancelAnimationFrame(requestId);
+    };
+  }, [isAutoScroll, selectedClassId]);
 
   const sortedHooks = [...hooks].sort((a,b) => a.match_order - b.match_order);
   const upcomingMatches = sortedHooks.filter(h => !h.winner_entry_id && h.entry1_id && h.entry2_id);
@@ -163,6 +211,16 @@ export default function PitScreen() {
       <div className="bg-blue-900 p-2 flex justify-between items-center shadow-lg border-b border-blue-700 flex-shrink-0 z-20">
         <h1 className="text-lg font-black italic tracking-tighter">PIT<span className="text-blue-400">BOARD</span></h1>
         <div className="flex items-center gap-4">
+            <button 
+                onClick={() => setIsAutoScroll(!isAutoScroll)}
+                className={`px-3 py-1 rounded text-xs font-bold uppercase transition-colors ${
+                    isAutoScroll 
+                    ? 'bg-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.5)]' 
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+            >
+                {isAutoScroll ? 'Auto Scroll: ON' : 'Auto Scroll: OFF'}
+            </button>
             <span className="text-xs text-blue-200 hidden md:block">Last Update: {lastUpdated.toLocaleTimeString()}</span>
             <select 
                 className="p-1 rounded font-bold text-black bg-white w-48 outline-none text-sm"
@@ -224,7 +282,7 @@ export default function PitScreen() {
                 </div>
 
                 {/* --- BRACKET SECTION --- */}
-                <div className="flex-1 bg-slate-950 p-4 md:p-6 overflow-auto relative">
+                <div ref={bracketContainerRef} className="flex-1 bg-slate-950 p-4 md:p-6 overflow-auto relative scroll-smooth">
                       <div className="flex h-full min-h-[400px] md:min-h-[600px] pl-2 md:pl-4">
                         
                         {(() => {
